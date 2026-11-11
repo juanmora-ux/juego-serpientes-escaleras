@@ -160,7 +160,7 @@
           </div>
           <h3 id="cardTitle" class="font-title font-bold text-xl text-[#1F2A38] mt-1">Reflexión del Camino</h3>
           
-          <!-- ANIMACIÓN RULETA ANIMADA -->
+          <!-- ANIMACIÓN RULETA -->
           <div id="rouletteBox" class="hidden my-4 text-center p-3 border border-[#D4AF37] bg-[#FFFDF0] rounded">
             <span id="rouletteIcon" class="inline-block text-2xl mb-1">🎯</span>
             <p id="rouletteText" class="font-sans text-xs font-semibold text-[#1F2A38]">Girando ruleta de temas...</p>
@@ -189,11 +189,9 @@
       { name: 'Jugador 4', color: '#1F2A38' }
     ];
 
-    // Posiciones de Escaleras y Serpientes
     const ladders = { 12: true, 34: true, 56: true, 74: true };
     const snakes = { 28: true, 50: true, 72: true, 92: true };
 
-    // 5 casillas especiales por fila
     const specialTiles = new Set();
     for (let row = 0; row < 10; row++) {
       for (let col of [2, 4, 6, 8, 10]) {
@@ -204,7 +202,6 @@
       }
     }
 
-    // BANCO EXTENDIDO DE 18 PREGUNTAS ÚNICAS
     const fullQuestionBank = [
       { id: 1, title: 'Libertad Para...', category: 'Libertad', text: 'Pasar del "libres de..." al "libres para...". ¿A qué aspiración diriges hoy tus decisiones para ser verdaderamente libre?', opt: ['Crear, construir y amar con propósito', 'Hacer solo lo que da placer inmediato', 'Evitar todo tipo de responsabilidad'], correct: 0 },
       { id: 2, title: 'Magnitud de la Libertad', category: 'Libertad', text: 'Según las lecturas del semestre, ¿cómo se mide el tamaño o la grandeza de la libertad humana?', opt: ['Por el número de bienes materiales poseídos', 'Por la grandeza de las aspiraciones a las que nos dirigimos', 'Por la cantidad de opciones en redes sociales'], correct: 1 },
@@ -367,18 +364,17 @@
         optionsEl.innerHTML = '';
       }
 
-      // DETERMINAR TIPO DE CASILLA Y RECOMPENSAS / PENALIZACIONES
       let moveCorrect = 2;
       let moveWrong = -2;
       let tileCategoryName = 'Casilla Especial ★';
 
       if (ladders[pos]) {
-        moveCorrect = 12; // Sube mucho por escalera
-        moveWrong = 3;   // Sube poco por fallo
+        moveCorrect = 12;
+        moveWrong = 3;
         tileCategoryName = 'Escalera Existencial ▲';
       } else if (snakes[pos]) {
-        moveCorrect = -2;  // Baja poco (evita gran caída)
-        moveWrong = -15;  // Caída fuerte por obstáculo
+        moveCorrect = -2;
+        moveWrong = -15;
         tileCategoryName = 'Serpiente Existencial ▼';
       }
 
@@ -404,24 +400,39 @@
             optionsEl.classList.remove('hidden');
             qItem.opt.forEach(function(optText, i) {
               const btn = document.createElement('button');
-              btn.className = 'w-full text-left p-2 border border-[#E5DEC9] hover:bg-[#E5DEC9]/40 rounded transition-colors text-xs text-[#1F2A38]';
+              btn.className = 'w-full text-left p-2 border border-[#E5DEC9] hover:bg-[#E5DEC9]/40 rounded transition-colors text-xs text-[#1F2A38] font-medium';
               btn.innerText = optText;
+              
               btn.onclick = function() {
+                // Deshabilitar botones inmediatamente para evitar múltiples clics
+                const allBtns = optionsEl.querySelectorAll('button');
+                allBtns.forEach(function(b) { b.disabled = true; });
+
                 if (i === qItem.correct) {
-                  let nextPos = player.pos + moveCorrect;
-                  if (nextPos > 100) nextPos = 100;
-                  if (nextPos < 1) nextPos = 1;
-                  player.pos = nextPos;
-                  if (textEl) textEl.innerText = '¡Respuesta correcta! Avanzas a la casilla ' + player.pos + ' (' + (moveCorrect >= 0 ? '+' : '') + moveCorrect + ').';
+                  btn.classList.add('bg-green-100', 'border-green-400');
+                  let finalPos = player.pos + moveCorrect;
+                  if (finalPos > 100) finalPos = 100;
+                  if (finalPos < 1) finalPos = 1;
+                  
+                  player.pos = finalPos;
+                  renderPlayers(); // Forzar renderizado de la ficha en el tablero inmediatamente
+                  
+                  if (textEl) textEl.innerText = '¡Respuesta correcta! Avanzas inmediatamente a la casilla ' + player.pos + ' (' + (moveCorrect >= 0 ? '+' : '') + moveCorrect + ').';
                 } else {
-                  let nextPos = player.pos + moveWrong;
-                  if (nextPos < 1) nextPos = 1;
-                  player.pos = nextPos;
-                  if (textEl) textEl.innerText = 'Respuesta incorrecta. Retrocedes a la casilla ' + player.pos + ' (' + moveWrong + ').';
+                  btn.classList.add('bg-red-100', 'border-red-400');
+                  let finalPos = player.pos + moveWrong;
+                  if (finalPos < 1) finalPos = 1;
+                  
+                  player.pos = finalPos;
+                  renderPlayers(); // Forzar renderizado de la ficha en el tablero inmediatamente
+                  
+                  if (textEl) textEl.innerText = 'Respuesta incorrecta. Retrocedes inmediatamente a la casilla ' + player.pos + ' (' + moveWrong + ').';
                 }
-                renderPlayers();
-                optionsEl.classList.add('hidden');
-                setTimeout(nextTurnCallback, 1500);
+                
+                setTimeout(function() {
+                  optionsEl.classList.add('hidden');
+                  nextTurnCallback();
+                }, 1600);
               };
               optionsEl.appendChild(btn);
             });
