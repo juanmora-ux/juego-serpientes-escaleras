@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Senderos del Alma - Juego de Mesa Existencial</title>
+  
+  <!-- Tailwind CSS por CDN directo sin eval -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Tipografías de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      background-color: #F7F3E9;
+      color: #2C2A29;
+      font-family: 'Lora', serif;
+    }
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      grid-template-rows: repeat(10, minmax(0, 1fr));
+      gap: 2px;
+      background-color: #D6CEB8;
+      border: 3px solid #4A4643;
+    }
+    .cell {
+      aspect-ratio: 1;
+      position: relative;
+      background-color: #FDFBF7;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 3px;
+      font-size: 0.7rem;
+      user-select: none;
+    }
+    .cell-even { background-color: #FAF6ED; }
+    .cell-snake { background-color: #FFF2EE; border: 1px solid #E8C8C1; }
+    .cell-ladder { background-color: #F0F5F2; border: 1px solid #C4D6CD; }
+    
+    .token {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+      display: inline-block;
+    }
+    
+    .paper-card {
+      background: #FDFBF7;
+      border: 1px solid #D6CEB8;
+      box-shadow: 4px 4px 0px #E5DEC9;
+    }
+    
+    .dice {
+      width: 50px;
+      height: 50px;
+      background-color: #FDFBF7;
+      border: 2px solid #2C2A29;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      box-shadow: 2px 2px 0px #2C2A29;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+  <!-- ENCABEZADO -->
+  <header class="text-center max-w-3xl mb-6">
+    <span class="font-sans text-xs uppercase tracking-widest text-[#A64B2A] font-semibold">Universidad de La Sabana — Persona y Trascendencia</span>
+    <h1 class="font-title text-3xl md:text-5xl font-bold text-[#1F2A38] mt-1">Senderos del Alma</h1>
+    <p class="text-sm md:text-base italic text-gray-700 mt-2">Un recorrido sobre la libertad, el perdón, las posturas de la existencia y la trascendencia.</p>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    
+    <!-- TABLERO (IZQUIERDA) -->
+    <section class="lg:col-span-7 flex flex-col items-center">
+      <div id="board" class="board-grid w-full max-w-[550px] paper-card p-1"></div>
+      
+      <div class="flex gap-6 mt-4 text-xs font-sans text-gray-700">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 bg-[#4A6B5D]/30 border border-[#4A6B5D] inline-block"></span> Escalera (Virtud / Elevación)
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 bg-[#A64B2A]/20 border border-[#A64B2A] inline-block"></span> Serpiente (Obstáculo / Caída)
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL DE CONTROL & EVENTOS (DERECHA) -->
+    <section class="lg:col-span-5 flex flex-col gap-6">
+      
+      <!-- ESTADO DE LA PARTIDA -->
+      <div class="paper-card p-6">
+        <h2 class="font-title text-lg font-bold text-[#1F2A38] border-b border-[#E5DEC9] pb-2 mb-4">Estado de la Partida</h2>
+        
+        <div id="playersList" class="space-y-3 mb-6 font-sans text-sm"></div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-[#E5DEC9]">
+          <div class="flex items-center gap-4">
+            <div id="diceDisplay" class="dice">1</div>
+            <div>
+              <p class="font-sans text-xs text-gray-500 uppercase">Turno de</p>
+              <p id="turnText" class="font-title font-bold text-base text-[#1F2A38]">Jugador 1</p>
+            </div>
+          </div>
+          <button id="rollBtn" onclick="rollDice()" class="bg-[#1F2A38] hover:bg-[#A64B2A] text-[#FDFBF7] font-sans font-medium px-5 py-2.5 rounded transition-colors text-sm shadow-sm">
+            Lanzar Dado
+          </button>
+        </div>
+      </div>
+
+      <!-- TARJETA ACADÉMICA / DILEMA -->
+      <div id="cardArea" class="paper-card p-6 min-h-[220px] flex flex-col justify-between">
+        <div>
+          <span id="cardCategory" class="font-sans text-xs font-semibold text-[#A64B2A] tracking-wider uppercase">Casilla Neutra</span>
+          <h3 id="cardTitle" class="font-title font-bold text-xl text-[#1F2A38] mt-1">Reflexión del Camino</h3>
+          <p id="cardText" class="text-sm leading-relaxed text-gray-700 mt-3 italic">
+            Avanza por el tablero. Al caer en una Escalera o Serpiente, se activará un reto académico o un dilema existencial.
+          </p>
+        </div>
+
+        <div id="cardOptions" class="mt-4 space-y-2 font-sans text-xs hidden"></div>
+      </div>
+
+      <!-- GUÍA PARA SUSTENTACIÓN -->
+      <button onclick="toggleModal()" class="w-full border border-[#1F2A38] text-[#1F2A38] hover:bg-[#1F2A38] hover:text-[#FDFBF7] font-sans font-medium py-2 rounded text-xs transition-colors">
+        📘 Ver Guía de Sustentación Oral (30% Nota)
+      </button>
+
+    </section>
+  </main>
+
+  <!-- MODAL SUSTENTACIÓN -->
+  <div id="modal" class="fixed inset-0 bg-[#1F2A38]/60 hidden items-center justify-center p-4 z-50">
+    <div class="paper-card max-w-2xl w-full p-6 max-h-[85vh] overflow-y-auto">
+      <h2 class="font-title text-2xl font-bold text-[#1F2A38] border-b border-[#E5DEC9] pb-2 mb-4">Fundamentación para la Sustentación Oral</h2>
+      
+      <div class="space-y-4 text-sm text-gray-800 leading-relaxed font-body">
+        <div>
+          <h4 class="font-bold text-[#A64B2A] font-sans text-xs uppercase">1. Idea Central y Narrativa</h4>
+          <p>El juego representa la trayectoria de la vida humana como un peregrinaje existencial. Inspirado en el concepto de la "Tejedora de la Memoria", cada decisión configura el curso de la persona.</p>
+        </div>
+        <div>
+          <h4 class="font-bold text-[#A64B2A] font-sans text-xs uppercase">2. Escaleras vs. Serpientes (Simbolismo)</h4>
+          <p><strong>Escaleras (Virtudes):</strong> Representan la <em>"Libertad Para..."</em> (amar, crear, comprometerse), la fe y la humildad. Elevarse es consecuencia de orientar la libertad hacia bienes superiores.</p>
+          <p><strong>Serpientes (Obstáculos):</strong> Representan el Rencor, el Orgullo y la Cobardía. Caes porque el rencor ancla a la persona al pasado y reduce su capacidad radical de libertad.</p>
+        </div>
+        <div>
+          <h4 class="font-bold text-[#A64B2A] font-sans text-xs uppercase">3. Mecánica de Reparación y Perdón</h4>
+          <p>Al caer en una serpiente, la app ofrece un "Acto de Reparación". Si el jugador formula una respuesta de reconciliación o humildad convincente, evita la caída, demostrando que el perdón libera del castigo.</p>
+        </div>
+      </div>
+
+      <button onclick="toggleModal()" class="mt-6 bg-[#1F2A38] text-[#FDFBF7] font-sans text-xs font-semibold px-4 py-2 rounded uppercase tracking-wider">Cerrar Guía</button>
+    </div>
+  </div>
+
+  <script>
+    const players = [
+      { id: 1, name: 'Jugador 1', pos: 1, color: '#A64B2A' },
+      { id: 2, name: 'Jugador 2', pos: 1, color: '#4A6B5D' }
+    ];
+    let currentPlayerIndex = 0;
+
+    const ladders = { 4: 16, 12: 33, 28: 55, 42: 63, 71: 91 };
+    const snakes = { 24: 8, 48: 26, 64: 36, 88: 52, 97: 75 };
+
+    const challenges = {
+      4: { title: 'Escalera: Libertad Para...', category: 'Libertad', text: 'Pasar del "libres de..." al "libres para...". ¿A qué aspiración diriges hoy tus decisiones para ser verdaderamente libre?', opt: ['Crear y amar con propósito', 'Hacer solo lo que me da placer', 'Evitar todo compromiso'], correct: 0 },
+      12: { title: 'Escalera: Virtud de Humildad', category: 'Perdón', text: 'Perdonar exige un corazón generoso que renuncia a la venganza. ¿Qué diferencia el perdón de la reconciliación?', opt: ['El perdón es una decisión interior; la reconciliación requiere acuerdo mutuo', 'Son exactamente lo mismo', 'Perdonar es olvidar todo de inmediato'], correct: 0 },
+      24: { title: 'Serpiente: El Rencor', category: 'Obstáculos del Perdón', text: 'El rencor mantiene vivo el daño en el presente. Para evitar caer a la casilla 8, responde: ¿Cuál es la clave para superar el rencor?', opt: ['Negar que existió la injusticia', 'Afrontar el dolor para alcanzar paz interior y renunciar a la venganza', 'Buscar vengarse en silencio'], correct: 1 },
+      48: { title: 'Serpiente: El Orgullo', category: 'Obstáculos del Perdón', text: 'El orgullo convierte el error en una amenaza al ego. Para no caer a la casilla 26: ¿Qué virtud vence al orgullo?', opt: ['Cobardía', 'Humildad para admitir el error', 'Resentimiento'], correct: 1 },
+      71: { title: 'Escalera: Trascendencia', category: 'Existencia', text: 'Entender la trascendencia no es solo seguir viviendo individualmente. ¿Cómo se permanece en el tiempo según la clase?', opt: ['A través del dinero acumulado', 'Por el legado, obras y amor dejado en los demás', 'Solamente viviendo muchos años'], correct: 1 }
+    };
+
+    function createBoard() {
+      const boardEl = document.getElementById('board');
+      if (!boardEl) return;
+      boardEl.innerHTML = '';
+      
+      for (let r = 9; r >= 0; r--) {
+        const isEvenRow = r % 2 === 0;
+        for (let c = 0; c < 10; c++) {
+          const col = isEvenRow ? c : 9 - c;
+          const cellNum = r * 10 + col + 1;
+          
+          const cell = document.createElement('div');
+          cell.id = 'cell-' + cellNum;
+          cell.className = 'cell ' + (cellNum % 2 === 0 ? 'cell-even' : '');
+          
+          if (ladders[cellNum]) cell.classList.add('cell-ladder');
+          if (snakes[cellNum]) cell.classList.add('cell-snake');
+
+          cell.innerHTML = '<span class="font-sans font-semibold text-gray-500 text-[10px]">' + cellNum + '</span><div id="tokens-' + cellNum + '" class="flex flex-wrap gap-1"></div>';
+          boardEl.appendChild(cell);
+        }
+      }
+      renderPlayers();
+    }
+
+    function renderPlayers() {
+      document.querySelectorAll('[id^="tokens-"]').forEach(function(el) { el.innerHTML = ''; });
+      
+      players.forEach(function(p) {
+        const container = document.getElementById('tokens-' + p.pos);
+        if (container) {
+          const token = document.createElement('span');
+          token.className = 'token';
+          token.style.backgroundColor = p.color;
+          token.title = p.name;
+          container.appendChild(token);
+        }
+      });
+
+      const listEl = document.getElementById('playersList');
+      if (listEl) {
+        listEl.innerHTML = players.map(function(p, idx) {
+          return '<div class="flex items-center justify-between p-2 rounded ' + (idx === currentPlayerIndex ? 'bg-[#E5DEC9]/50 font-semibold' : '') + '">' +
+            '<div class="flex items-center gap-2"><span class="token" style="background-color: ' + p.color + '"></span><span class="text-[#1F2A38]">' + p.name + '</span></div>' +
+            '<span class="font-sans text-xs text-gray-600">Casilla ' + p.pos + '</span></div>';
+        }).join('');
+      }
+    }
+
+    function rollDice() {
+      const rollBtn = document.getElementById('rollBtn');
+      if (rollBtn) rollBtn.disabled = true;
+
+      const diceValue = Math.floor(Math.random() * 6) + 1;
+      const diceDisplay = document.getElementById('diceDisplay');
+      if (diceDisplay) diceDisplay.innerText = diceValue;
+
+      const player = players[currentPlayerIndex];
+      let newPos = player.pos + diceValue;
+
+      if (newPos > 100) newPos = 100;
+      player.pos = newPos;
+      renderPlayers();
+
+      setTimeout(function() {
+        handleTileEvent(player, newPos, function() {
+          currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+          const turnText = document.getElementById('turnText');
+          if (turnText) turnText.innerText = players[currentPlayerIndex].name;
+          if (rollBtn) rollBtn.disabled = false;
+        });
+      }, 400);
+    }
+
+    function handleTileEvent(player, pos, nextTurnCallback) {
+      const titleEl = document.getElementById('cardTitle');
+      const textEl = document.getElementById('cardText');
+      const catEl = document.getElementById('cardCategory');
+      const optionsEl = document.getElementById('cardOptions');
+
+      if (optionsEl) {
+        optionsEl.classList.add('hidden');
+        optionsEl.innerHTML = '';
+      }
+
+      if (challenges[pos]) {
+        const item = challenges[pos];
+        if (catEl) catEl.innerText = item.category;
+        if (titleEl) titleEl.innerText = item.title;
+        if (textEl) textEl.innerText = item.text;
+
+        if (optionsEl) {
+          optionsEl.classList.remove('hidden');
+          item.opt.forEach(function(optText, i) {
+            const btn = document.createElement('button');
+            btn.className = 'w-full text-left p-2 border border-[#E5DEC9] hover:bg-[#E5DEC9]/40 rounded transition-colors text-xs text-[#1F2A38]';
+            btn.innerText = optText;
+            btn.onclick = function() {
+              if (i === item.correct) {
+                if (ladders[pos]) {
+                  player.pos = ladders[pos];
+                  if (textEl) textEl.innerText = '¡Correcto! Asciendes por la virtud hasta la casilla ' + ladders[pos] + '.';
+                } else {
+                  if (textEl) textEl.innerText = '¡Respuesta correcta! Superas el obstáculo y evitas caer.';
+                }
+              } else {
+                if (snakes[pos]) {
+                  player.pos = snakes[pos];
+                  if (textEl) textEl.innerText = 'Respuesta incorrecta. caes a la casilla ' + snakes[pos] + '.';
+                } else {
+                  if (textEl) textEl.innerText = 'No lograste ascender por la escalera este turno.';
+                }
+              }
+              renderPlayers();
+              optionsEl.classList.add('hidden');
+              setTimeout(nextTurnCallback, 1400);
+            };
+            optionsEl.appendChild(btn);
+          });
+        }
+      } else if (ladders[pos]) {
+        player.pos = ladders[pos];
+        if (catEl) catEl.innerText = 'Escalera Existencial';
+        if (titleEl) titleEl.innerText = 'Elevación por Virtud';
+        if (textEl) textEl.innerText = 'Subes directamente a la casilla ' + ladders[pos] + '.';
+        renderPlayers();
+        setTimeout(nextTurnCallback, 1000);
+      } else if (snakes[pos]) {
+        player.pos = snakes[pos];
+        if (catEl) catEl.innerText = 'Serpiente Existencial';
+        if (titleEl) titleEl.innerText = 'Caída por Obstáculo';
+        if (textEl) textEl.innerText = 'Retrocedes a la casilla ' + snakes[pos] + '.';
+        renderPlayers();
+        setTimeout(nextTurnCallback, 1000);
+      } else {
+        if (catEl) catEl.innerText = 'Casilla Standard';
+        if (titleEl) titleEl.innerText = 'Casilla ' + pos;
+        if (textEl) textEl.innerText = 'El camino continúa en calma. Reflexiona sobre tus acciones.';
+        nextTurnCallback();
+      }
+    }
+
+    function toggleModal() {
+      const modal = document.getElementById('modal');
+      if (modal) {
+        modal.classList.toggle('hidden');
+        modal.classList.toggle('flex');
+      }
+    }
+
+    window.onload = function() {
+      createBoard();
+    };
+  </script>
+</body>
+</html>
