@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Senderos del Alma - Juego de Mesa Existencial</title>
   
-  <!-- Tailwind CSS por CDN directo sin eval -->
+  <!-- Tailwind CSS por CDN directo -->
   <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- Tipografías de Google Fonts -->
@@ -41,6 +41,7 @@
     .cell-even { background-color: #FAF6ED; }
     .cell-snake { background-color: #FFF2EE; border: 1px solid #E8C8C1; }
     .cell-ladder { background-color: #F0F5F2; border: 1px solid #C4D6CD; }
+    .cell-special { background-color: #FFFDF0; border: 1.5px dashed #D4AF37; }
     
     .token {
       width: 16px;
@@ -71,6 +72,14 @@
       font-weight: bold;
       box-shadow: 2px 2px 0px #2C2A29;
     }
+
+    .roulette-spin {
+      animation: spin 0.1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
@@ -89,12 +98,16 @@
     <section class="lg:col-span-7 flex flex-col items-center">
       <div id="board" class="board-grid w-full max-w-[550px] paper-card p-1"></div>
       
-      <div class="flex gap-6 mt-4 text-xs font-sans text-gray-700">
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 bg-[#4A6B5D]/30 border border-[#4A6B5D] inline-block"></span> Escalera (Virtud / Elevación)
+      <!-- LEYENDA -->
+      <div class="flex flex-wrap gap-4 mt-4 text-xs font-sans text-gray-700 justify-center">
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 bg-[#4A6B5D]/30 border border-[#4A6B5D] inline-block"></span> Escalera (Virtud)
         </div>
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 bg-[#A64B2A]/20 border border-[#A64B2A] inline-block"></span> Serpiente (Obstáculo / Caída)
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 bg-[#A64B2A]/20 border border-[#A64B2A] inline-block"></span> Serpiente (Obstáculo)
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 bg-[#FFFDF0] border border-dashed border-[#D4AF37] inline-block"></span> Casilla Especial (Ruleta ★)
         </div>
       </div>
     </section>
@@ -122,51 +135,31 @@
         </div>
       </div>
 
-      <!-- TARJETA ACADÉMICA / DILEMA -->
-      <div id="cardArea" class="paper-card p-6 min-h-[220px] flex flex-col justify-between">
+      <!-- TARJETA ACADÉMICA / DILEMA / RULETA -->
+      <div id="cardArea" class="paper-card p-6 min-h-[240px] flex flex-col justify-between">
         <div>
-          <span id="cardCategory" class="font-sans text-xs font-semibold text-[#A64B2A] tracking-wider uppercase">Casilla Neutra</span>
+          <div class="flex justify-between items-center">
+            <span id="cardCategory" class="font-sans text-xs font-semibold text-[#A64B2A] tracking-wider uppercase">Casilla Neutra</span>
+            <span id="remainingDeckText" class="font-sans text-[10px] text-gray-500 font-medium"></span>
+          </div>
           <h3 id="cardTitle" class="font-title font-bold text-xl text-[#1F2A38] mt-1">Reflexión del Camino</h3>
+          
+          <!-- ANIMACIÓN RULETA ANIMADA -->
+          <div id="rouletteBox" class="hidden my-4 text-center p-3 border border-[#D4AF37] bg-[#FFFDF0] rounded">
+            <span id="rouletteIcon" class="inline-block text-2xl mb-1">🎯</span>
+            <p id="rouletteText" class="font-sans text-xs font-semibold text-[#1F2A38]">Girando ruleta de temas...</p>
+          </div>
+
           <p id="cardText" class="text-sm leading-relaxed text-gray-700 mt-3 italic">
-            Avanza por el tablero. Al caer en una Escalera o Serpiente, se activará un reto académico o un dilema existencial.
+            Avanza por el tablero. Hay 5 casillas especiales por fila (★) que activan la ruleta con 18 preguntas únicas sin repetición.
           </p>
         </div>
 
         <div id="cardOptions" class="mt-4 space-y-2 font-sans text-xs hidden"></div>
       </div>
 
-      <!-- GUÍA PARA SUSTENTACIÓN -->
-      <button onclick="toggleModal()" class="w-full border border-[#1F2A38] text-[#1F2A38] hover:bg-[#1F2A38] hover:text-[#FDFBF7] font-sans font-medium py-2 rounded text-xs transition-colors">
-        📘 Ver Guía de Sustentación Oral (30% Nota)
-      </button>
-
     </section>
   </main>
-
-  <!-- MODAL SUSTENTACIÓN -->
-  <div id="modal" class="fixed inset-0 bg-[#1F2A38]/60 hidden items-center justify-center p-4 z-50">
-    <div class="paper-card max-w-2xl w-full p-6 max-h-[85vh] overflow-y-auto">
-      <h2 class="font-title text-2xl font-bold text-[#1F2A38] border-b border-[#E5DEC9] pb-2 mb-4">Fundamentación para la Sustentación Oral</h2>
-      
-      <div class="space-y-4 text-sm text-gray-800 leading-relaxed font-body">
-        <div>
-          <h4 class="font-bold text-[#A64B2A] font-sans text-xs uppercase">1. Idea Central y Narrativa</h4>
-          <p>El juego representa la trayectoria de la vida humana como un peregrinaje existencial. Inspirado en el concepto de la "Tejedora de la Memoria", cada decisión configura el curso de la persona.</p>
-        </div>
-        <div>
-          <h4 class="font-bold text-[#A64B2A] font-sans text-xs uppercase">2. Escaleras vs. Serpientes (Simbolismo)</h4>
-          <p><strong>Escaleras (Virtudes):</strong> Representan la <em>"Libertad Para..."</em> (amar, crear, comprometerse), la fe y la humildad. Elevarse es consecuencia de orientar la libertad hacia bienes superiores.</p>
-          <p><strong>Serpientes (Obstáculos):</strong> Representan el Rencor, el Orgullo y la Cobardía. Caes porque el rencor ancla a la persona al pasado y reduce su capacidad radical de libertad.</p>
-        </div>
-        <div>
-          <h4 class="font-bold text-[#A64B2A] font-sans text-xs uppercase">3. Mecánica de Reparación y Perdón</h4>
-          <p>Al caer en una serpiente, la app ofrece un "Acto de Reparación". Si el jugador formula una respuesta de reconciliación o humildad convincente, evita la caída, demostrando que el perdón libera del castigo.</p>
-        </div>
-      </div>
-
-      <button onclick="toggleModal()" class="mt-6 bg-[#1F2A38] text-[#FDFBF7] font-sans text-xs font-semibold px-4 py-2 rounded uppercase tracking-wider">Cerrar Guía</button>
-    </div>
-  </div>
 
   <script>
     const players = [
@@ -178,13 +171,52 @@
     const ladders = { 4: 16, 12: 33, 28: 55, 42: 63, 71: 91 };
     const snakes = { 24: 8, 48: 26, 64: 36, 88: 52, 97: 75 };
 
-    const challenges = {
-      4: { title: 'Escalera: Libertad Para...', category: 'Libertad', text: 'Pasar del "libres de..." al "libres para...". ¿A qué aspiración diriges hoy tus decisiones para ser verdaderamente libre?', opt: ['Crear y amar con propósito', 'Hacer solo lo que me da placer', 'Evitar todo compromiso'], correct: 0 },
-      12: { title: 'Escalera: Virtud de Humildad', category: 'Perdón', text: 'Perdonar exige un corazón generoso que renuncia a la venganza. ¿Qué diferencia el perdón de la reconciliación?', opt: ['El perdón es una decisión interior; la reconciliación requiere acuerdo mutuo', 'Son exactamente lo mismo', 'Perdonar es olvidar todo de inmediato'], correct: 0 },
-      24: { title: 'Serpiente: El Rencor', category: 'Obstáculos del Perdón', text: 'El rencor mantiene vivo el daño en el presente. Para evitar caer a la casilla 8, responde: ¿Cuál es la clave para superar el rencor?', opt: ['Negar que existió la injusticia', 'Afrontar el dolor para alcanzar paz interior y renunciar a la venganza', 'Buscar vengarse en silencio'], correct: 1 },
-      48: { title: 'Serpiente: El Orgullo', category: 'Obstáculos del Perdón', text: 'El orgullo convierte el error en una amenaza al ego. Para no caer a la casilla 26: ¿Qué virtud vence al orgullo?', opt: ['Cobardía', 'Humildad para admitir el error', 'Resentimiento'], correct: 1 },
-      71: { title: 'Escalera: Trascendencia', category: 'Existencia', text: 'Entender la trascendencia no es solo seguir viviendo individualmente. ¿Cómo se permanece en el tiempo según la clase?', opt: ['A través del dinero acumulado', 'Por el legado, obras y amor dejado en los demás', 'Solamente viviendo muchos años'], correct: 1 }
-    };
+    // Exactamente 5 casillas especiales por fila
+    const specialTiles = new Set();
+    for (let row = 0; row < 10; row++) {
+      for (let col of [2, 4, 6, 8, 10]) {
+        const tileNum = row * 10 + col;
+        if (!ladders[tileNum] && !snakes[tileNum] && tileNum < 100) {
+          specialTiles.add(tileNum);
+        }
+      }
+    }
+
+    // BANCO EXTENDIDO DE 18 PREGUNTAS ÚNICAS
+    const fullQuestionBank = [
+      { id: 1, title: 'Libertad Para...', category: 'Libertad', text: 'Pasar del "libres de..." al "libres para...". ¿A qué aspiración diriges hoy tus decisiones para ser verdaderamente libre?', opt: ['Crear, construir y amar con propósito', 'Hacer solo lo que da placer inmediato', 'Evitar todo tipo de responsabilidad'], correct: 0 },
+      { id: 2, title: 'Magnitud de la Libertad', category: 'Libertad', text: 'Según las lecturas del semestre, ¿cómo se mide el tamaño o la grandeza de la libertad humana?', opt: ['Por el número de bienes materiales poseídos', 'Por la grandeza de las aspiraciones a las que nos dirigimos', 'Por la cantidad de opciones en redes sociales'], correct: 1 },
+      { id: 3, title: 'Perdón vs Reconciliación', category: 'Perdón', text: '¿Qué diferencia el perdón de la reconciliación según la antropología vista en clase?', opt: ['El perdón es una decisión interior; la reconciliación requiere reconstrucción mutua', 'Son términos idénticos', 'El perdón exige olvidar el dolor de inmediato'], correct: 0 },
+      { id: 4, title: 'Obstáculo: El Rencor', category: 'Perdón', text: 'El rencor mantiene vivo el daño. ¿Qué consecuencia produce mantener el rencor en la vida diaria?', opt: ['Protege de caer de nuevo', 'Ancla a la persona al pasado y reduce su libertad', 'Aumenta la autoestima personal'], correct: 1 },
+      { id: 5, title: 'Obstáculo: El Orgullo', category: 'Perdón', text: 'El orgullo convierte el reconocimiento del error en una amenaza. ¿Qué virtud vence al orgullo al pedir perdón?', opt: ['Cobardía', 'Humildad para reconocer la vulnerabilidad propia', 'Resentimiento'], correct: 1 },
+      { id: 6, title: 'Niveles del Perdón: Reparación', category: 'Perdón', text: '¿En qué consiste la etapa de Reparación dentro del proceso de perdón?', opt: ['Acciones concretas para asumir y corregir las consecuencias del daño', 'Decir una excusa rápida', 'Dejar que el tiempo lo borre todo'], correct: 0 },
+      { id: 7, title: 'Finitud como Motor', category: 'Muerte', text: '¿Cómo influye en nuestra manera de vivir el reconocer conscientemente que somos seres finitos?', opt: ['Genera angustia sin salida', 'Nos motiva a elegir activamente qué es lo verdaderamente importante', 'Hace que nada valga la pena'], correct: 1 },
+      { id: 8, title: 'Muerte en el Cristianismo', category: 'Muerte', text: 'Para la fe cristiana, ¿por qué la muerte no representa la última palabra en la existencia humana?', opt: ['Por la esperanza firme en la resurrección y la vida eterna', 'Porque el alma renace en un ciclo infinito de animales', 'Porque la conciencia desaparece'], correct: 0 },
+      { id: 9, title: 'Muerte en el Judaísmo', category: 'Muerte', text: 'En la visión judía analizada en las exposiciones, ¿cuál es el eje central al contemplar la muerte?', opt: ['El desprecio por la vida terrenal', 'El valor sagrado de la vida y el acompañamiento comunitario del duelo', 'El aislamiento individual del doliente'], correct: 1 },
+      { id: 10, title: 'Muerte en el Islam', category: 'Muerte', text: 'En el Islam, ¿qué significado tiene la muerte en relación con la vida terrena?', opt: ['Una transición hacia el Día del Juicio evaluado por las acciones', 'El fin absoluto de la existencia sin trascendencia', 'Un estado de sueño eterno'], correct: 0 },
+      { id: 11, title: 'Visión Budista del Samsara', category: 'Muerte', text: 'En la tradición filosófica budista, ¿qué representa el término Samsara?', opt: ['El cielo eterno', 'El ciclo continuo de nacimiento, muerte y renacimiento', 'El Dios creador del universo'], correct: 1 },
+      { id: 12, title: 'Teoría del Solipsismo', category: 'Posturas de la Existencia', text: '¿Qué sostiene la corriente filosófica del solipsismo frente a la realidad y la muerte?', opt: ['Solo la propia mente es segura y la conciencia fabrica la realidad', 'La ciencia puede revivir a los muertos', 'Todos somos la misma persona'], correct: 0 },
+      { id: 13, title: 'Conciencia Cósmica (ORCH-OR)', category: 'Posturas de la Existencia', text: '¿Qué propone la teoría cuántica de Penrose & Hameroff sobre la conciencia humana?', opt: ['La mente es solo un computador mecánico', 'La conciencia proviene de procesos cuánticos conectados con el cosmos', 'El universo no tiene inteligencia'], correct: 1 },
+      { id: 14, title: 'Teoría del Sueño', category: 'Posturas de la Existencia', text: 'Platón y Calderón de la Barca reflexionaron sobre la vida como un sueño. ¿Qué sucedería al morir según esta visión?', opt: ['El despertar hacia una realidad superior o más verdadera', 'El fin del funcionamiento orgánico únicamente', 'La repetición exacta del día anterior'], correct: 0 },
+      { id: 15, title: 'Espiritualidad vs Religión', category: 'Antropología de la Religión', text: '¿Cuál es la distinción entre espiritualidad y religión trabajada en clase?', opt: ['La espiritualidad es la vivencia interior de apertura; la religión la estructura social y ritual', 'No existe ninguna diferencia', 'La espiritualidad solo existe en templos'], correct: 0 },
+      { id: 16, title: 'Elementos del Fenómeno Religioso', category: 'Antropología de la Religión', text: '¿Cuáles son los componentes clave estudiados en la Antropología de la Religión?', opt: ['Solo las leyes de la física', 'Creencias, ritos, prácticas, símbolos y relatos', 'Únicamente los edificios históricos'], correct: 1 },
+      { id: 17, title: 'Experiencia de Dios', category: 'Experiencias de Dios', text: 'Según el Papa Francisco en los materiales de clase, ¿qué define esencialmente a la Fe?', opt: ['Una teoría científica abstracta', 'Un encuentro personal de Dios con el ser humano', 'Una regla impuesta por la sociedad'], correct: 1 },
+      { id: 18, title: 'Trascendencia en el Legado', category: 'Trascendencia', text: '¿De qué manera una persona trasciende más allá de su finitud terrenal?', opt: ['Por el recuerdo, el amor, las obras y la memoria dejada en los demás', 'Únicamente mediante estatuas físicas', 'No es posible trascender de ninguna manera'], correct: 0 }
+    ];
+
+    // SISTEMA DE MAZO DINÁMICO SIN REPETICIÓN
+    let activeDeck = [...fullQuestionBank];
+
+    function getNextQuestion() {
+      if (activeDeck.length === 0) {
+        // Reiniciar mazo si ya se respondieron todas las 18 preguntas
+        activeDeck = [...fullQuestionBank];
+      }
+      const randomIndex = Math.floor(Math.random() * activeDeck.length);
+      const question = activeDeck[randomIndex];
+      activeDeck.splice(randomIndex, 1); // Extraer del mazo activo
+      return question;
+    }
 
     function createBoard() {
       const boardEl = document.getElementById('board');
@@ -202,9 +234,12 @@
           cell.className = 'cell ' + (cellNum % 2 === 0 ? 'cell-even' : '');
           
           if (ladders[cellNum]) cell.classList.add('cell-ladder');
-          if (snakes[cellNum]) cell.classList.add('cell-snake');
+          else if (snakes[cellNum]) cell.classList.add('cell-snake');
+          else if (specialTiles.has(cellNum)) cell.classList.add('cell-special');
 
-          cell.innerHTML = '<span class="font-sans font-semibold text-gray-500 text-[10px]">' + cellNum + '</span><div id="tokens-' + cellNum + '" class="flex flex-wrap gap-1"></div>';
+          const starTag = specialTiles.has(cellNum) ? '<span class="text-[#D4AF37] font-bold text-[9px]">★</span>' : '';
+
+          cell.innerHTML = '<div class="flex justify-between items-center"><span class="font-sans font-semibold text-gray-500 text-[10px]">' + cellNum + '</span>' + starTag + '</div><div id="tokens-' + cellNum + '" class="flex flex-wrap gap-1"></div>';
           boardEl.appendChild(cell);
         }
       }
@@ -233,6 +268,10 @@
             '<span class="font-sans text-xs text-gray-600">Casilla ' + p.pos + '</span></div>';
         }).join('');
       }
+
+      // Actualizar contador visual de preguntas restantes en mazo
+      const deckText = document.getElementById('remainingDeckText');
+      if (deckText) deckText.innerText = 'Preguntas en mazo: ' + activeDeck.length + '/' + fullQuestionBank.length;
     }
 
     function rollDice() {
@@ -265,47 +304,54 @@
       const textEl = document.getElementById('cardText');
       const catEl = document.getElementById('cardCategory');
       const optionsEl = document.getElementById('cardOptions');
+      const rouletteBox = document.getElementById('rouletteBox');
+      const rouletteIcon = document.getElementById('rouletteIcon');
 
       if (optionsEl) {
         optionsEl.classList.add('hidden');
         optionsEl.innerHTML = '';
       }
 
-      if (challenges[pos]) {
-        const item = challenges[pos];
-        if (catEl) catEl.innerText = item.category;
-        if (titleEl) titleEl.innerText = item.title;
-        if (textEl) textEl.innerText = item.text;
+      // CASILLA ESPECIAL: Ruleta + Selección sin repetición
+      if (specialTiles.has(pos)) {
+        if (catEl) catEl.innerText = 'Casilla Especial ★';
+        if (titleEl) titleEl.innerText = 'GIRANDO RULETA DE DILEMAS';
+        if (textEl) textEl.innerText = 'Has caído en una casilla especial de reflexión existencial...';
+        if (rouletteBox) rouletteBox.classList.remove('hidden');
+        if (rouletteIcon) rouletteIcon.classList.add('roulette-spin');
 
-        if (optionsEl) {
-          optionsEl.classList.remove('hidden');
-          item.opt.forEach(function(optText, i) {
-            const btn = document.createElement('button');
-            btn.className = 'w-full text-left p-2 border border-[#E5DEC9] hover:bg-[#E5DEC9]/40 rounded transition-colors text-xs text-[#1F2A38]';
-            btn.innerText = optText;
-            btn.onclick = function() {
-              if (i === item.correct) {
-                if (ladders[pos]) {
-                  player.pos = ladders[pos];
-                  if (textEl) textEl.innerText = '¡Correcto! Asciendes por la virtud hasta la casilla ' + ladders[pos] + '.';
+        setTimeout(function() {
+          if (rouletteIcon) rouletteIcon.classList.remove('roulette-spin');
+          if (rouletteBox) rouletteBox.classList.add('hidden');
+
+          // Obtener pregunta sin repetir
+          const qItem = getNextQuestion();
+          renderPlayers(); // Actualiza contador de mazo
+
+          if (catEl) catEl.innerText = 'Ruleta: ' + qItem.category;
+          if (titleEl) titleEl.innerText = qItem.title;
+          if (textEl) textEl.innerText = qItem.text;
+
+          if (optionsEl) {
+            optionsEl.classList.remove('hidden');
+            qItem.opt.forEach(function(optText, i) {
+              const btn = document.createElement('button');
+              btn.className = 'w-full text-left p-2 border border-[#E5DEC9] hover:bg-[#E5DEC9]/40 rounded transition-colors text-xs text-[#1F2A38]';
+              btn.innerText = optText;
+              btn.onclick = function() {
+                if (i === qItem.correct) {
+                  if (textEl) textEl.innerText = '¡Respuesta acertada! Sumas claridad existencial a tu camino.';
                 } else {
-                  if (textEl) textEl.innerText = '¡Respuesta correcta! Superas el obstáculo y evitas caer.';
+                  if (textEl) textEl.innerText = 'Respuesta incorrecta. Continúas tu recorrido reflejando el tema.';
                 }
-              } else {
-                if (snakes[pos]) {
-                  player.pos = snakes[pos];
-                  if (textEl) textEl.innerText = 'Respuesta incorrecta. caes a la casilla ' + snakes[pos] + '.';
-                } else {
-                  if (textEl) textEl.innerText = 'No lograste ascender por la escalera este turno.';
-                }
-              }
-              renderPlayers();
-              optionsEl.classList.add('hidden');
-              setTimeout(nextTurnCallback, 1400);
-            };
-            optionsEl.appendChild(btn);
-          });
-        }
+                optionsEl.classList.add('hidden');
+                setTimeout(nextTurnCallback, 1400);
+              };
+              optionsEl.appendChild(btn);
+            });
+          }
+        }, 1000);
+
       } else if (ladders[pos]) {
         player.pos = ladders[pos];
         if (catEl) catEl.innerText = 'Escalera Existencial';
@@ -313,6 +359,7 @@
         if (textEl) textEl.innerText = 'Subes directamente a la casilla ' + ladders[pos] + '.';
         renderPlayers();
         setTimeout(nextTurnCallback, 1000);
+
       } else if (snakes[pos]) {
         player.pos = snakes[pos];
         if (catEl) catEl.innerText = 'Serpiente Existencial';
@@ -320,19 +367,12 @@
         if (textEl) textEl.innerText = 'Retrocedes a la casilla ' + snakes[pos] + '.';
         renderPlayers();
         setTimeout(nextTurnCallback, 1000);
+
       } else {
         if (catEl) catEl.innerText = 'Casilla Standard';
         if (titleEl) titleEl.innerText = 'Casilla ' + pos;
         if (textEl) textEl.innerText = 'El camino continúa en calma. Reflexiona sobre tus acciones.';
         nextTurnCallback();
-      }
-    }
-
-    function toggleModal() {
-      const modal = document.getElementById('modal');
-      if (modal) {
-        modal.classList.toggle('hidden');
-        modal.classList.toggle('flex');
       }
     }
 
