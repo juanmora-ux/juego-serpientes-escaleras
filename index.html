@@ -39,6 +39,8 @@
       user-select: none;
     }
     .cell-even { background-color: #FAF6ED; }
+    .cell-snake { background-color: #FFF2EE; border: 1px solid #E8C8C1; }
+    .cell-ladder { background-color: #F0F5F2; border: 1px solid #C4D6CD; }
     .cell-special { background-color: #FFFDF0; border: 1.5px dashed #D4AF37; }
     
     .token {
@@ -105,7 +107,7 @@
     </button>
   </div>
 
-  <!-- CONTENEDOR PRINCIPAL DEL JUEGO (OCULTO INICIALMENTE) -->
+  <!-- CONTENEDOR PRINCIPAL DEL JUEGO -->
   <main id="gameScreen" class="w-full max-w-6xl grid-cols-1 lg:grid-cols-12 gap-8 items-start hidden">
     
     <!-- TABLERO (IZQUIERDA) -->
@@ -115,10 +117,13 @@
       <!-- LEYENDA -->
       <div class="flex flex-wrap gap-4 mt-4 text-xs font-sans text-gray-700 justify-center">
         <div class="flex items-center gap-1.5">
-          <span class="w-3 h-3 bg-[#FAF6ED] border border-gray-300 inline-block"></span> Casilla Estándar
+          <span class="w-3 h-3 bg-[#4A6B5D]/30 border border-[#4A6B5D] inline-block"></span> Escalera (+12 Acierto / +3 Fallo)
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="w-3 h-3 bg-[#FFFDF0] border border-dashed border-[#D4AF37] inline-block"></span> Casilla Especial (Ruleta ★)
+          <span class="w-3 h-3 bg-[#A64B2A]/20 border border-[#A64B2A] inline-block"></span> Serpiente (-2 Acierto / -15 Fallo)
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 bg-[#FFFDF0] border border-dashed border-[#D4AF37] inline-block"></span> Especial ★ (+2 Acierto / -2 Fallo)
         </div>
       </div>
     </section>
@@ -162,7 +167,7 @@
           </div>
 
           <p id="cardText" class="text-sm leading-relaxed text-gray-700 mt-3 italic">
-            Avanza por el tablero. Hay 5 casillas especiales por fila (★) que activan la ruleta con 18 preguntas únicas sin repetición.
+            Avanza por el tablero. Responder bien te hace subir posiciones; responder mal te hace bajar.
           </p>
         </div>
 
@@ -184,12 +189,16 @@
       { name: 'Jugador 4', color: '#1F2A38' }
     ];
 
-    // Exactamente 5 casillas especiales por fila (50 en total)
+    // Posiciones de Escaleras y Serpientes
+    const ladders = { 12: true, 34: true, 56: true, 74: true };
+    const snakes = { 28: true, 50: true, 72: true, 92: true };
+
+    // 5 casillas especiales por fila
     const specialTiles = new Set();
     for (let row = 0; row < 10; row++) {
       for (let col of [2, 4, 6, 8, 10]) {
         const tileNum = row * 10 + col;
-        if (tileNum < 100) {
+        if (!ladders[tileNum] && !snakes[tileNum] && tileNum < 100) {
           specialTiles.add(tileNum);
         }
       }
@@ -277,11 +286,16 @@
           cell.id = 'cell-' + cellNum;
           cell.className = 'cell ' + (cellNum % 2 === 0 ? 'cell-even' : '');
           
-          if (specialTiles.has(cellNum)) cell.classList.add('cell-special');
+          if (ladders[cellNum]) cell.classList.add('cell-ladder');
+          else if (snakes[cellNum]) cell.classList.add('cell-snake');
+          else if (specialTiles.has(cellNum)) cell.classList.add('cell-special');
 
-          const starTag = specialTiles.has(cellNum) ? '<span class="text-[#D4AF37] font-bold text-[9px]">★</span>' : '';
+          let tag = '';
+          if (ladders[cellNum]) tag = '<span class="text-[#4A6B5D] font-bold text-[9px]">▲</span>';
+          else if (snakes[cellNum]) tag = '<span class="text-[#A64B2A] font-bold text-[9px]">▼</span>';
+          else if (specialTiles.has(cellNum)) tag = '<span class="text-[#D4AF37] font-bold text-[9px]">★</span>';
 
-          cell.innerHTML = '<div class="flex justify-between items-center"><span class="font-sans font-semibold text-gray-500 text-[10px]">' + cellNum + '</span>' + starTag + '</div><div id="tokens-' + cellNum + '" class="flex flex-wrap gap-1"></div>';
+          cell.innerHTML = '<div class="flex justify-between items-center"><span class="font-sans font-semibold text-gray-500 text-[10px]">' + cellNum + '</span>' + tag + '</div><div id="tokens-' + cellNum + '" class="flex flex-wrap gap-1"></div>';
           boardEl.appendChild(cell);
         }
       }
@@ -353,10 +367,25 @@
         optionsEl.innerHTML = '';
       }
 
-      if (specialTiles.has(pos)) {
-        if (catEl) catEl.innerText = 'Casilla Especial ★';
+      // DETERMINAR TIPO DE CASILLA Y RECOMPENSAS / PENALIZACIONES
+      let moveCorrect = 2;
+      let moveWrong = -2;
+      let tileCategoryName = 'Casilla Especial ★';
+
+      if (ladders[pos]) {
+        moveCorrect = 12; // Sube mucho por escalera
+        moveWrong = 3;   // Sube poco por fallo
+        tileCategoryName = 'Escalera Existencial ▲';
+      } else if (snakes[pos]) {
+        moveCorrect = -2;  // Baja poco (evita gran caída)
+        moveWrong = -15;  // Caída fuerte por obstáculo
+        tileCategoryName = 'Serpiente Existencial ▼';
+      }
+
+      if (specialTiles.has(pos) || ladders[pos] || snakes[pos]) {
+        if (catEl) catEl.innerText = tileCategoryName;
         if (titleEl) titleEl.innerText = 'GIRANDO RULETA DE DILEMAS';
-        if (textEl) textEl.innerText = 'Has caído en una casilla especial de reflexión existencial...';
+        if (textEl) textEl.innerText = 'Has caído en un punto de reflexión existencial...';
         if (rouletteBox) rouletteBox.classList.remove('hidden');
         if (rouletteIcon) rouletteIcon.classList.add('roulette-spin');
 
@@ -367,7 +396,7 @@
           const qItem = getNextQuestion();
           renderPlayers();
 
-          if (catEl) catEl.innerText = 'Ruleta: ' + qItem.category;
+          if (catEl) catEl.innerText = tileCategoryName + ' — ' + qItem.category;
           if (titleEl) titleEl.innerText = qItem.title;
           if (textEl) textEl.innerText = qItem.text;
 
@@ -379,12 +408,20 @@
               btn.innerText = optText;
               btn.onclick = function() {
                 if (i === qItem.correct) {
-                  if (textEl) textEl.innerText = '¡Respuesta acertada! Sumas claridad existencial a tu camino.';
+                  let nextPos = player.pos + moveCorrect;
+                  if (nextPos > 100) nextPos = 100;
+                  if (nextPos < 1) nextPos = 1;
+                  player.pos = nextPos;
+                  if (textEl) textEl.innerText = '¡Respuesta correcta! Avanzas a la casilla ' + player.pos + ' (' + (moveCorrect >= 0 ? '+' : '') + moveCorrect + ').';
                 } else {
-                  if (textEl) textEl.innerText = 'Respuesta incorrecta. Continúas tu recorrido reflejando el tema.';
+                  let nextPos = player.pos + moveWrong;
+                  if (nextPos < 1) nextPos = 1;
+                  player.pos = nextPos;
+                  if (textEl) textEl.innerText = 'Respuesta incorrecta. Retrocedes a la casilla ' + player.pos + ' (' + moveWrong + ').';
                 }
+                renderPlayers();
                 optionsEl.classList.add('hidden');
-                setTimeout(nextTurnCallback, 1400);
+                setTimeout(nextTurnCallback, 1500);
               };
               optionsEl.appendChild(btn);
             });
