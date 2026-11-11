@@ -39,13 +39,11 @@
       user-select: none;
     }
     .cell-even { background-color: #FAF6ED; }
-    .cell-snake { background-color: #FFF2EE; border: 1px solid #E8C8C1; }
-    .cell-ladder { background-color: #F0F5F2; border: 1px solid #C4D6CD; }
     .cell-special { background-color: #FFFDF0; border: 1.5px dashed #D4AF37; }
     
     .token {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
       border: 2px solid #FFFFFF;
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
@@ -91,8 +89,24 @@
     <p class="text-sm md:text-base italic text-gray-700 mt-2">Un recorrido sobre la libertad, el perdón, las posturas de la existencia y la trascendencia.</p>
   </header>
 
-  <!-- CONTENEDOR PRINCIPAL -->
-  <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+  <!-- PANTALLA DE CONFIGURACIÓN INICIAL -->
+  <div id="setupScreen" class="paper-card p-8 max-w-md w-full text-center my-auto">
+    <h2 class="font-title text-2xl font-bold text-[#1F2A38] mb-2">Configurar Partida</h2>
+    <p class="font-sans text-xs text-gray-600 mb-6">Selecciona el número de participantes para comenzar el recorrido (Mínimo 2, Máximo 4):</p>
+    
+    <div class="flex justify-center gap-4 mb-6">
+      <button onclick="selectPlayerCount(2)" id="btnCount-2" class="count-btn w-12 h-12 rounded-lg font-sans font-bold border-2 border-[#1F2A38] bg-[#1F2A38] text-[#FDFBF7] text-lg">2</button>
+      <button onclick="selectPlayerCount(3)" id="btnCount-3" class="count-btn w-12 h-12 rounded-lg font-sans font-bold border-2 border-[#1F2A38] bg-[#FDFBF7] text-[#1F2A38] text-lg">3</button>
+      <button onclick="selectPlayerCount(4)" id="btnCount-4" class="count-btn w-12 h-12 rounded-lg font-sans font-bold border-2 border-[#1F2A38] bg-[#FDFBF7] text-[#1F2A38] text-lg">4</button>
+    </div>
+
+    <button onclick="startGame()" class="w-full bg-[#A64B2A] hover:bg-[#85391E] text-[#FDFBF7] font-sans font-semibold py-3 rounded transition-colors text-sm uppercase tracking-wider">
+      Iniciar Juego
+    </button>
+  </div>
+
+  <!-- CONTENEDOR PRINCIPAL DEL JUEGO (OCULTO INICIALMENTE) -->
+  <main id="gameScreen" class="w-full max-w-6xl grid-cols-1 lg:grid-cols-12 gap-8 items-start hidden">
     
     <!-- TABLERO (IZQUIERDA) -->
     <section class="lg:col-span-7 flex flex-col items-center">
@@ -101,10 +115,7 @@
       <!-- LEYENDA -->
       <div class="flex flex-wrap gap-4 mt-4 text-xs font-sans text-gray-700 justify-center">
         <div class="flex items-center gap-1.5">
-          <span class="w-3 h-3 bg-[#4A6B5D]/30 border border-[#4A6B5D] inline-block"></span> Escalera (Virtud)
-        </div>
-        <div class="flex items-center gap-1.5">
-          <span class="w-3 h-3 bg-[#A64B2A]/20 border border-[#A64B2A] inline-block"></span> Serpiente (Obstáculo)
+          <span class="w-3 h-3 bg-[#FAF6ED] border border-gray-300 inline-block"></span> Casilla Estándar
         </div>
         <div class="flex items-center gap-1.5">
           <span class="w-3 h-3 bg-[#FFFDF0] border border-dashed border-[#D4AF37] inline-block"></span> Casilla Especial (Ruleta ★)
@@ -162,21 +173,23 @@
   </main>
 
   <script>
-    const players = [
-      { id: 1, name: 'Jugador 1', pos: 1, color: '#A64B2A' },
-      { id: 2, name: 'Jugador 2', pos: 1, color: '#4A6B5D' }
-    ];
+    let selectedCount = 2;
+    let players = [];
     let currentPlayerIndex = 0;
 
-    const ladders = { 4: 16, 12: 33, 28: 55, 42: 63, 71: 91 };
-    const snakes = { 24: 8, 48: 26, 64: 36, 88: 52, 97: 75 };
+    const availableColors = [
+      { name: 'Jugador 1', color: '#A64B2A' },
+      { name: 'Jugador 2', color: '#4A6B5D' },
+      { name: 'Jugador 3', color: '#D4AF37' },
+      { name: 'Jugador 4', color: '#1F2A38' }
+    ];
 
-    // Exactamente 5 casillas especiales por fila
+    // Exactamente 5 casillas especiales por fila (50 en total)
     const specialTiles = new Set();
     for (let row = 0; row < 10; row++) {
       for (let col of [2, 4, 6, 8, 10]) {
         const tileNum = row * 10 + col;
-        if (!ladders[tileNum] && !snakes[tileNum] && tileNum < 100) {
+        if (tileNum < 100) {
           specialTiles.add(tileNum);
         }
       }
@@ -204,17 +217,48 @@
       { id: 18, title: 'Trascendencia en el Legado', category: 'Trascendencia', text: '¿De qué manera una persona trasciende más allá de su finitud terrenal?', opt: ['Por el recuerdo, el amor, las obras y la memoria dejada en los demás', 'Únicamente mediante estatuas físicas', 'No es posible trascender de ninguna manera'], correct: 0 }
     ];
 
-    // SISTEMA DE MAZO DINÁMICO SIN REPETICIÓN
     let activeDeck = [...fullQuestionBank];
+
+    function selectPlayerCount(count) {
+      selectedCount = count;
+      [2, 3, 4].forEach(function(num) {
+        const btn = document.getElementById('btnCount-' + num);
+        if (num === count) {
+          btn.className = 'count-btn w-12 h-12 rounded-lg font-sans font-bold border-2 border-[#1F2A38] bg-[#1F2A38] text-[#FDFBF7] text-lg';
+        } else {
+          btn.className = 'count-btn w-12 h-12 rounded-lg font-sans font-bold border-2 border-[#1F2A38] bg-[#FDFBF7] text-[#1F2A38] text-lg';
+        }
+      });
+    }
+
+    function startGame() {
+      players = [];
+      for (let i = 0; i < selectedCount; i++) {
+        players.push({
+          id: i + 1,
+          name: availableColors[i].name,
+          pos: 1,
+          color: availableColors[i].color
+        });
+      }
+      currentPlayerIndex = 0;
+
+      document.getElementById('setupScreen').classList.add('hidden');
+      const gameScreen = document.getElementById('gameScreen');
+      gameScreen.classList.remove('hidden');
+      gameScreen.classList.add('grid');
+
+      document.getElementById('turnText').innerText = players[0].name;
+      createBoard();
+    }
 
     function getNextQuestion() {
       if (activeDeck.length === 0) {
-        // Reiniciar mazo si ya se respondieron todas las 18 preguntas
         activeDeck = [...fullQuestionBank];
       }
       const randomIndex = Math.floor(Math.random() * activeDeck.length);
       const question = activeDeck[randomIndex];
-      activeDeck.splice(randomIndex, 1); // Extraer del mazo activo
+      activeDeck.splice(randomIndex, 1);
       return question;
     }
 
@@ -233,9 +277,7 @@
           cell.id = 'cell-' + cellNum;
           cell.className = 'cell ' + (cellNum % 2 === 0 ? 'cell-even' : '');
           
-          if (ladders[cellNum]) cell.classList.add('cell-ladder');
-          else if (snakes[cellNum]) cell.classList.add('cell-snake');
-          else if (specialTiles.has(cellNum)) cell.classList.add('cell-special');
+          if (specialTiles.has(cellNum)) cell.classList.add('cell-special');
 
           const starTag = specialTiles.has(cellNum) ? '<span class="text-[#D4AF37] font-bold text-[9px]">★</span>' : '';
 
@@ -269,7 +311,6 @@
         }).join('');
       }
 
-      // Actualizar contador visual de preguntas restantes en mazo
       const deckText = document.getElementById('remainingDeckText');
       if (deckText) deckText.innerText = 'Preguntas en mazo: ' + activeDeck.length + '/' + fullQuestionBank.length;
     }
@@ -312,7 +353,6 @@
         optionsEl.innerHTML = '';
       }
 
-      // CASILLA ESPECIAL: Ruleta + Selección sin repetición
       if (specialTiles.has(pos)) {
         if (catEl) catEl.innerText = 'Casilla Especial ★';
         if (titleEl) titleEl.innerText = 'GIRANDO RULETA DE DILEMAS';
@@ -324,9 +364,8 @@
           if (rouletteIcon) rouletteIcon.classList.remove('roulette-spin');
           if (rouletteBox) rouletteBox.classList.add('hidden');
 
-          // Obtener pregunta sin repetir
           const qItem = getNextQuestion();
-          renderPlayers(); // Actualiza contador de mazo
+          renderPlayers();
 
           if (catEl) catEl.innerText = 'Ruleta: ' + qItem.category;
           if (titleEl) titleEl.innerText = qItem.title;
@@ -352,33 +391,13 @@
           }
         }, 1000);
 
-      } else if (ladders[pos]) {
-        player.pos = ladders[pos];
-        if (catEl) catEl.innerText = 'Escalera Existencial';
-        if (titleEl) titleEl.innerText = 'Elevación por Virtud';
-        if (textEl) textEl.innerText = 'Subes directamente a la casilla ' + ladders[pos] + '.';
-        renderPlayers();
-        setTimeout(nextTurnCallback, 1000);
-
-      } else if (snakes[pos]) {
-        player.pos = snakes[pos];
-        if (catEl) catEl.innerText = 'Serpiente Existencial';
-        if (titleEl) titleEl.innerText = 'Caída por Obstáculo';
-        if (textEl) textEl.innerText = 'Retrocedes a la casilla ' + snakes[pos] + '.';
-        renderPlayers();
-        setTimeout(nextTurnCallback, 1000);
-
       } else {
-        if (catEl) catEl.innerText = 'Casilla Standard';
+        if (catEl) catEl.innerText = 'Casilla Estándar';
         if (titleEl) titleEl.innerText = 'Casilla ' + pos;
         if (textEl) textEl.innerText = 'El camino continúa en calma. Reflexiona sobre tus acciones.';
         nextTurnCallback();
       }
     }
-
-    window.onload = function() {
-      createBoard();
-    };
   </script>
 </body>
 </html>
